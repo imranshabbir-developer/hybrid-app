@@ -1,0 +1,30 @@
+{
+  "name": "erp",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "apps/desktop"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "desktop": "npm run start -w apps/desktop",
+    "db:push": "npm run db:push -w apps/api",
+    "db:push:all": "node scripts/push-databases.js",
+    "db:seed": "npm run db:seed -w apps/api",
+    "db:seed:demo": "node scripts/seed-demo-pipeline.js",
+    "db:import:excel": "node scripts/import-legacy-excel.js",
+    "test:formulas": "node scripts/formula-parity.js",
+    "setup": "npm run db:push:all && npm run db:seed && npm run db:seed:demo",
+    "build:api": "npm run build -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "build": "npm run build:api && npm run build:web",
+    "dist:desktop": "npm run build && npm run dist -w apps/desktop"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}

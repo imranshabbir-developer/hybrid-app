@@ -1,0 +1,367 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COMPANY
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SAVED
+  POSTED
+}
+
+model Company {
+  id              String          @id @default(cuid())
+  code            String          @unique
+  name            String
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  users           User[]
+  purchaseOrders  PurchaseOrder[]
+  supplierEntries SupplierEntry[]
+  supplierMasters SupplierMaster[]
+  importShipments ImportShipment[]
+  lookups         Lookup[]
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  passwordHash     String
+  fullName         String
+  phone            String          @default("")
+  jobTitle         String          @default("")
+  role             Role
+  companyId        String?
+  company          Company?        @relation(fields: [companyId], references: [id])
+  isActive         Boolean         @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  purchaseOrders   PurchaseOrder[] @relation("PoCreator")
+  supplierEntries  SupplierEntry[] @relation("SupplierEntryCreator")
+  supplierMasters  SupplierMaster[] @relation("SupplierMasterCreator")
+  importShipments  ImportShipment[] @relation("ImportShipmentCreator")
+
+  @@index([companyId])
+  @@index([role])
+}
+
+model PurchaseOrder {
+  id                String              @id @default(cuid())
+  poNumber          String              @unique
+  poDate            DateTime
+  status            PurchaseOrderStatus @default(DRAFT)
+
+  companyName       String              @default("")
+  companyStreet     String              @default("")
+  companyCity       String              @default("")
+  companyPhone      String              @default("")
+  companyFax        String              @default("")
+  companyWebsite    String              @default("")
+
+  beneficiaryName   String              @default("")
+  beneficiaryContact String             @default("")
+  beneficiaryStreet String              @default("")
+  beneficiaryCity   String              @default("")
+  beneficiaryPhone  String              @default("")
+  beneficiaryFax    String              @default("")
+
+  shipperName       String              @default("")
+  shipperContact    String              @default("")
+  shipperStreet     String              @default("")
+  shipperCity       String              @default("")
+  shipperPhone      String              @default("")
+  shipperFax        String              @default("")
+
+  consigneeName     String              @default("")
+  consigneeCompany  String              @default("")
+  consigneeStreet   String              @default("")
+  consigneeCity     String              @default("")
+  consigneePhone    String              @default("")
+
+  originOfGoods     String              @default("")
+  shipVia           String              @default("")
+  hsCode            String              @default("")
+  incoterms         String              @default("FOB")
+  tolerance         String              @default("5%")
+  currency          String              @default("USD")
+
+  comments          String              @default("")
+  contactFooter     String              @default("")
+
+  grandTotal        Float               @default(0)
+
+  companyId         String?
+  company           Company?            @relation(fields: [companyId], references: [id])
+  createdById       String?
+  createdBy         User?               @relation("PoCreator", fields: [createdById], references: [id])
+
+  lines             PurchaseOrderLine[]
+  supplierEntries   SupplierEntry[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@index([poDate])
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  lineNo          Int
+  itemCode        String        @default("")
+  description     String        @default("")
+  quantity        Float         @default(0)
+  unitPrice       Float         @default(0)
+  lineTotal       Float         @default(0)
+
+  @@index([purchaseOrderId])
+}
+
+enum CertStatus {
+  YES
+  NO
+  UNDER_PROCESS
+}
+
+model SupplierEntry {
+  id                 String     @id @default(cuid())
+  purchaseOrderId    String?
+  purchaseOrder      PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  purchaseOrderNo    String     @default("")
+  entryDate          DateTime
+  ppcDemandNo        String     @default("")
+  ppcDemandDate      DateTime?
+  shipperName        String     @default("")
+  division           String     @default("")
+  supplierCategory   String     @default("")
+  productCategory    String     @default("")
+  tolerance          String     @default("")
+  productItemCode    String     @default("")
+  shipperAddress     String     @default("")
+  country            String     @default("")
+  shipperEmail       String     @default("")
+  contactNo          String     @default("")
+  websiteName        String     @default("")
+  productDescription String     @default("")
+  countryOfOrigin    String     @default("")
+  productHsCode      String     @default("")
+  unitValue          Float      @default(0)
+  totalQuantity      Float      @default(0)
+  totalValue         Float      @default(0)
+  leadTimeDays       Int?
+  portOfLoading      String     @default("")
+  oekotexCert        CertStatus @default(NO)
+  isoCert            CertStatus @default(NO)
+  reachCert          CertStatus @default(NO)
+  sourceLineNo       Int?
+  notes              String     @default("")
+
+  companyId          String?
+  company            Company?   @relation(fields: [companyId], references: [id])
+  createdById        String?
+  createdBy          User?      @relation("SupplierEntryCreator", fields: [createdById], references: [id])
+  masterRow          SupplierMaster?
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([companyId])
+  @@index([purchaseOrderId])
+  @@index([purchaseOrderNo])
+  @@index([productItemCode])
+}
+
+model SupplierMaster {
+  id                 String     @id @default(cuid())
+  srNo               Int
+  supplierEntryId    String?    @unique
+  supplierEntry      SupplierEntry? @relation(fields: [supplierEntryId], references: [id], onDelete: SetNull)
+  purchaseOrderId    String?
+  purchaseOrderNo    String     @default("")
+  entryDate          DateTime
+  ppcDemandNo        String     @default("")
+  ppcDemandDate      DateTime?
+  division           String     @default("")
+  shipperName        String     @default("")
+  supplierCategory   String     @default("")
+  productCategory    String     @default("")
+  productItemCode    String     @default("")
+  shipperAddress     String     @default("")
+  country            String     @default("")
+  shipperEmail       String     @default("")
+  contactNo          String     @default("")
+  websiteName        String     @default("")
+  productDescription String     @default("")
+  countryOfOrigin    String     @default("")
+  productHsCode      String     @default("")
+  unitValue          Float      @default(0)
+  totalQuantity      Float      @default(0)
+  totalValue         Float      @default(0)
+  leadTimeDays       Int?
+  portOfLoading      String     @default("")
+  oekotexCert        CertStatus @default(NO)
+  isoCert            CertStatus @default(NO)
+  reachCert          CertStatus @default(NO)
+  remarks            String     @default("")
+  poCompleted        Boolean    @default(false)
+
+  companyId          String?
+  company            Company?   @relation(fields: [companyId], references: [id])
+  createdById        String?
+  createdBy          User?      @relation("SupplierMasterCreator", fields: [createdById], references: [id])
+  importShipments    ImportShipment[]
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([companyId])
+  @@index([purchaseOrderNo])
+  @@index([shipperName])
+  @@index([productItemCode])
+  @@index([productCategory])
+  @@index([srNo])
+}
+
+enum ImportStatus {
+  OPEN
+  CLOSED
+}
+
+model Lookup {
+  id        String   @id @default(cuid())
+  type      String
+  code      String   @default("")
+  label     String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, label])
+  @@index([type, isActive])
+  @@index([companyId])
+}
+
+model ImportShipment {
+  id                    String       @id @default(cuid())
+  srNo                  Int
+  status                ImportStatus @default(OPEN)
+
+  supplierMasterId      String?
+  supplierMaster        SupplierMaster? @relation(fields: [supplierMasterId], references: [id], onDelete: SetNull)
+  purchaseOrderId       String?
+  purchaseOrderNo       String       @default("")
+
+  division              String       @default("")
+  merchandiser          String       @default("")
+  monthLabel            String       @default("")
+  ppcDemandNo           String       @default("")
+  ppcDemandDate         DateTime?
+  purchaseOrderDate     DateTime?
+  poQuantity            Float        @default(0)
+  shipperName           String       @default("")
+  productDescription    String       @default("")
+  quantityShipped       Float        @default(0)
+  unitValue             Float        @default(0)
+  totalAmount           Float        @default(0)
+
+  bank                  String       @default("")
+  paymentTerm           String       @default("")
+  modeOfShipment        String       @default("")
+  incoterm              String       @default("")
+  supplierDeliveryTime  Int?
+  standardLeadTime      Int          @default(85)
+
+  ppSampleReadyDate     DateTime?
+  actualShipmentReadyDate DateTime?
+  onBoardDate           DateTime?
+  etaAtPort             DateTime?
+  blAwbNo               String       @default("")
+  blDate                DateTime?
+  pol                   String       @default("")
+  destinationPort       String       @default("")
+  modeOfClearance       String       @default("")
+  eouLimitUtilized      String       @default("")
+
+  fetaDate              DateTime?
+  revision1             DateTime?
+  revision2             DateTime?
+  revision3             DateTime?
+  factoryArrivalDelay   Int?
+
+  forwarder             String       @default("")
+  clearingAgent         String       @default("")
+  docToAgent            String       @default("")
+  remarks               String       @default("")
+
+  // Closed Files extras (File-B Current Closed Files 2020)
+  category              String       @default("")
+  delayCause            String       @default("")
+  qcReportReceivedDate  DateTime?
+  qcOrderQty            Float        @default(0)
+  qcRejectedQty         Float        @default(0)
+  qcLessQty             Float        @default(0)
+  qcClaimDate           DateTime?
+  qcReportStandardDays  Int          @default(10)
+  qcMaterialFinancialLoss Float      @default(0)
+  poClosedFromErp       Boolean      @default(false)
+
+  bankName              String       @default("")
+  bankTtLcNumber        String       @default("")
+  bankDate              DateTime?
+  bankRoe               Float        @default(0)
+  bankChargesAdvance    Float        @default(0)
+  bankChargesLcOpening  Float        @default(0)
+  bankChargesRetirement Float        @default(0)
+  bankDocsPayment       String       @default("")
+  bankDocsFromBank      DateTime?
+  bankOaAdvanceSettlement String     @default("")
+
+  insuranceCompany      String       @default("")
+  insuranceBillNo       String       @default("")
+  insuranceDate         DateTime?
+  insuranceAmount       Float        @default(0)
+
+  logisticsBillNo       String       @default("")
+  logisticsDate         DateTime?
+  logisticsWeightCbm    String       @default("")
+  logisticsAmount       Float        @default(0)
+  logisticsBillToFinance DateTime?
+
+  gdNo                  String       @default("")
+  gdDate                DateTime?
+  shipmentClearanceDate DateTime?
+  clearanceBillNo       String       @default("")
+  clearanceBillDate     DateTime?
+  clearanceAmount       Float        @default(0)
+
+  companyId             String?
+  company               Company?     @relation(fields: [companyId], references: [id])
+  createdById           String?
+  createdBy             User?        @relation("ImportShipmentCreator", fields: [createdById], references: [id])
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@index([purchaseOrderNo])
+  @@index([supplierMasterId])
+  @@index([srNo])
+}

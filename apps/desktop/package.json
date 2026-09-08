@@ -1,0 +1,53 @@
+{
+  "name": "@erp/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "description": "Nexus ERP desktop shell",
+  "author": "Nexus ERP",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.nexus.erp",
+    "productName": "Nexus ERP",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../api/dist",
+        "to": "api/dist"
+      },
+      {
+        "from": "../web/dist",
+        "to": "web"
+      },
+      {
+        "from": "../../data",
+        "to": "seed-data",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "NexusERP-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.0.3",
+    "electron-builder": "^26.0.12"
+  }
+}
